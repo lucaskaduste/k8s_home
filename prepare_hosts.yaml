@@ -1,0 +1,172 @@
+---
+- name: Prepare Host for Kubernetes
+  hosts: all
+  become: yes
+  become_user: root
+  tasks:
+
+    # - name: Print all available facts
+    #   ansible.builtin.debug:
+    #     var: ansible_facts.distribution_release
+    # - name: Print all available facts
+    #   ansible.builtin.debug:
+    #     var: "{{inventory_hostname}}"
+
+    - name: Disable swap for current session
+      ansible.builtin.command: swapoff -a
+    
+    - name: Disable swap permanently, persist reboots
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+        replace: '#\1\2\3swap\4'
+        backup: yes
+
+    - name: Set Machine Hostname
+      ansible.builtin.hostname:
+        name: "{{inventory_hostname}}"
+        use: systemd
+
+    - name: change Hostname in /etc/hosts
+      ansible.builtin.command: sed -i 's/srvvirtlnxtpldcpt001/{{inventory_hostname}}/g' /etc/hosts
+
+    - name: Install required python
+      ansible.builtin.shell: 
+        cmd: apt-get update && apt-get install -y python3-apt python3-pip
+
+    - name: Copy SSHD Config file
+      ansible.builtin.copy:
+        src: ./sshd.conf
+        dest: /etc/ssh/sshd_config
+        follow: yes
+
+    - name: Copy sudoers passwordless file
+      ansible.builtin.copy:
+        src: ./ubuntu_passwordless.conf
+        dest: /etc/sudoers.d/ubuntu_passwordless
+        mode: '0440'
+
+    - name: Copy SSH Public-Key into ubuntu user
+      ansible.builtin.copy:
+        src: ./ssh/pubkey.pem
+        dest: /home/ubuntu/.ssh/authorized_keys
+        follow: yes
+
+    - name: install modules of kernel linux
+      ansible.builtin.copy:
+        src: ./k8s.conf
+        dest: /etc/modules-load.d/k8s.conf
+        mode: '0644'
+
+    - name: configuration parameters sysctl
+      ansible.builtin.copy:
+        src: ./k8s-cri.conf
+        dest: /etc/sysctl.d/k8s.conf
+
+    - name: overlay Add
+      community.general.modprobe:
+        name: overlay
+        state: present 
+
+    - name: br_netfilter Add
+      community.general.modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: exec sysctl
+      ansible.builtin.command: "sysctl --system"
+
+    - name: exec pip install
+      ansible.builtin.command: 'python3 -m pip install --upgrade pip setuptools wheel'
+
+    - name: Upgrade All Packages via APT
+      ansible.builtin.apt:
+        upgrade: yes
+        update_cache: yes
+        state: present
+
+    - name: install required packages
+      ansible.builtin.apt:
+        pkg:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - wget
+        - git
+        - gpg
+        - open-vm-tools
+        state: present
+        update_cache: yes
+
+    - name: add repository key APT
+      ansible.builtin.apt_key: 
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: add repository key APT
+      ansible.builtin.apt_key: 
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+
+    - name: add repository to install containerd
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu "{{ansible_facts.distribution_release}}" stable
+        state: present
+
+    - name: add repository to install kubernetes tools (kuebelet, kubeadm, kubectl)
+      ansible.builtin.apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+
+    - name: install containerd
+      ansible.builtin.apt:
+        name: containerd.io
+        update_cache: yes
+
+    - name: install kubeadm - kubelet - kubectl packages
+      apt:
+        pkg:
+        - kubeadm
+        - kubectl
+        - kubelet
+        state: present
+        update_cache: yes
+
+    - name: exec apt-mark hold at kubernetes packages
+      ansible.builtin.command: 'apt-mark hold kubelet kubeadm kubectl'
+
+    - name: create diretory of configuration containerd
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: create configuration file
+      ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+
+    - name: change containerd config
+      ansible.builtin.command: sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+
+    - name: restart SSHD
+      ansible.builtin.service: 
+        name: sshd
+        state: restarted
+
+    - name: restart containerd
+      ansible.builtin.service: 
+        name: containerd
+        state: restarted
+
+    - name: Change user password
+      user:
+        name: ubuntu
+        update_password: always
+        password: "{{ 'W8@e4gFR3oT3fwZb'|password_hash('sha512') }}"
+
+    # - name: Reboot the host and wait 3 minutes to complete reboot
+    #   ansible.builtin.reboot:
+    #     reboot_timeout: 180
+    #     reboot_command: 'shutdown -r now'
+    #     boot_time_command: uptime | cut -d ' ' -f 5

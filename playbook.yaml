@@ -1,0 +1,8 @@
+- name: Run the 'Prepare' Playbook for all hosts
+  ansible.builtin.import_playbook: prepare_hosts.yaml
+
+- name: Run the 'Control-Plane Init' Playbook for the First Control-Plane/master Node
+  ansible.builtin.import_playbook: start_control_plane.yaml
+
+- name: Run the 'Join into cluster' Playbook for Worker Nodes
+  ansible.builtin.import_playbook: start_workers.yaml

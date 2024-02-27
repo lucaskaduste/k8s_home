@@ -1,0 +1,11 @@
+- name: start kubernetes worker nodes
+  hosts: worker_nodes
+  become: yes
+  become_user: root
+  tasks:
+
+    - name: cleaning existing installation
+      command: kubeadm reset -f
+
+    - name: Play command join 
+      command: "{{hostvars[groups['control_plane_first'][0]]['join_command']}}"

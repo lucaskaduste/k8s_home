@@ -1,0 +1,47 @@
+control_plane_first:
+  hosts:
+    srvvirtlnxk8sdcpt101.privcloud.vsf:
+      ansible_host: 192.168.240.101
+      ansible_user: ubuntu
+      # ansible_password: 1234
+      # ansible_become_password: 1234
+      ansible_ssh_private_key_file: ./ssh/privkey.pem
+
+master_nodes:
+  hosts:
+    srvvirtlnxk8sdcpt102.privcloud.vsf:
+      ansible_host: 192.168.240.102
+      ansible_user: ubuntu
+      # ansible_password: 1234
+      # ansible_become_password: 1234
+      ansible_ssh_private_key_file: ./ssh/privkey.pem
+
+    srvvirtlnxk8sdcpt103.privcloud.vsf:
+      ansible_host: 192.168.240.103
+      ansible_user: ubuntu
+      # ansible_password: 1234
+      # ansible_become_password: 1234
+      ansible_ssh_private_key_file: ./ssh/privkey.pem
+
+worker_nodes:
+  hosts:
+    srvvirtlnxk8sdcpt104.privcloud.vsf:
+      ansible_host: 192.168.240.104
+      ansible_user: ubuntu
+      # ansible_password: 1234
+      # ansible_become_password: 1234
+      ansible_ssh_private_key_file: ./ssh/privkey.pem
+
+    srvvirtlnxk8sdcpt105.privcloud.vsf:
+      ansible_host: 192.168.240.105
+      ansible_user: ubuntu
+      # ansible_password: 1234
+      # ansible_become_password: 1234
+      ansible_ssh_private_key_file: ./ssh/privkey.pem
+
+    srvvirtlnxk8sdcpt106.privcloud.vsf:
+      ansible_host: 192.168.240.106
+      ansible_user: ubuntu
+      # ansible_password: 1234
+      # ansible_become_password: 1234
+      ansible_ssh_private_key_file: ./ssh/privkey.pem
